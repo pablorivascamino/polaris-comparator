@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Player</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Unbounded:wght@300;700;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --border: #1e1e2e;
+      --accent1: #ff3864;
+      --accent2: #00d4ff;
+      --accent3: #ffe566;
+      --accent4: #7fff6e;
+      --text: #e8e8f0;
+      --muted: #55556a;
+      --radius: 4px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 64px;
+      background-image:
+        radial-gradient(ellipse 60% 40% at 20% 10%, rgba(255,56,100,.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 90%, rgba(0,212,255,.06) 0%, transparent 60%);
+    }
+
+    /* ── HEADER ──────────────────────────────── */
+    header {
+      width: 100%;
+      max-width: 700px;
+      margin-bottom: 48px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+    }
+
+    .logo {
+      font-family: 'Unbounded', sans-serif;
+      font-weight: 900;
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: var(--text);
+    }
+    .logo span { color: var(--accent1); }
+
+    .tagline {
+      margin-top: 8px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    /* ── SOLO MODE TOGGLE ────────────────────── */
+    .solo-wrap {
+      width: 100%;
+      max-width: 700px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 36px;
+      padding: 14px 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      user-select: none;
+      transition: border-color .2s;
+    }
+    .solo-wrap:hover { border-color: var(--accent1); }
+
+    /* Custom checkbox */
+    .cb-box {
+      width: 22px; height: 22px;
+      border: 2px solid var(--muted);
+      border-radius: 3px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      transition: border-color .2s, background .2s;
+    }
+    .cb-box svg { display: none; }
+    #soloCheckbox:checked ~ .solo-wrap .cb-box,
+    .solo-wrap.active .cb-box {
+      border-color: var(--accent1);
+      background: var(--accent1);
+    }
+    .solo-wrap.active .cb-box svg { display: block; }
+
+    .solo-label {
+      flex: 1;
+    }
+    .solo-label strong {
+      display: block;
+      font-size: .78rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .solo-label span {
+      font-size: .65rem;
+      color: var(--muted);
+    }
+
+    .solo-pill {
+      font-size: .6rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 50px;
+      border: 1px solid var(--muted);
+      color: var(--muted);
+      transition: .2s;
+    }
+    .solo-wrap.active .solo-pill {
+      border-color: var(--accent1);
+      color: var(--accent1);
+    }
+
+    /* ── PLAYERS GRID ────────────────────────── */
+    .players {
+      width: 100%;
+      max-width: 700px;
+      display: grid;
+      gap: 16px;
+    }
+
+    /* ── SINGLE PLAYER ───────────────────────── */
+    .player {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .25s;
+    }
+
+    .player::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--accent);
+      opacity: .6;
+      transition: opacity .2s;
+    }
+    .player.playing::before { opacity: 1; }
+    .player.playing { border-color: var(--accent); }
+
+    /* Track number */
+    .track-num {
+      position: absolute;
+      top: 20px; right: 24px;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: var(--border);
+      line-height: 1;
+      pointer-events: none;
+      transition: color .25s;
+    }
+    .player.playing .track-num { color: var(--accent); opacity: .18; }
+
+    /* Title / subtitle */
+    .track-title {
+      font-family: 'Unbounded', sans-serif;
+      font-weight: 700;
+      font-size: clamp(.85rem, 2vw, 1rem);
+      letter-spacing: -.01em;
+      margin-bottom: 3px;
+      max-width: 80%;
+    }
+    .track-subtitle {
+      font-size: .62rem;
+      color: var(--muted);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    /* Controls row */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* Play button */
+    .btn-play {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      transition: background .2s, transform .1s;
+      padding: 0;
+    }
+    .btn-play:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+    .btn-play:active { transform: scale(.93); }
+
+    .btn-play .icon-play  { display: block; }
+    .btn-play .icon-pause { display: none; }
+    .player.playing .btn-play .icon-play  { display: none; }
+    .player.playing .btn-play .icon-pause { display: block; }
+
+    /* Progress + time */
+    .progress-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      position: relative;
+      cursor: pointer;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width .1s linear;
+      position: relative;
+    }
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      right: -5px; top: 50%;
+      transform: translateY(-50%);
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .progress-bar:hover .progress-fill::after { opacity: 1; }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: .6rem;
+      color: var(--muted);
+      letter-spacing: .08em;
+    }
+
+    /* Volume */
+    .vol-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .vol-wrap svg { color: var(--muted); flex-shrink: 0; }
+
+    input[type=range].vol-slider {
+      -webkit-appearance: none;
+      width: 64px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range].vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background .2s;
+    }
+    input[type=range].vol-slider:hover::-webkit-slider-thumb { background: var(--accent); }
+
+    /* Loading / error states */
+    .player-status {
+      font-size: .6rem;
+      color: var(--muted);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-top: 8px;
+      min-height: 14px;
+    }
+
+    /* ── ACCENT COLORS per player ────────────── */
+    .player:nth-child(1) { --accent: var(--accent1); }
+    .player:nth-child(2) { --accent: var(--accent2); }
+    .player:nth-child(3) { --accent: var(--accent3); }
+    .player:nth-child(4) { --accent: var(--accent4); }
+
+    /* ── FOOTER ──────────────────────────────── */
+    footer {
+      margin-top: 56px;
+      font-size: .6rem;
+      color: var(--muted);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    /* ── PLAYING INDICATOR dots ──────────────── */
+    .eq-anim {
+      display: none;
+      align-items: flex-end;
+      gap: 2px;
+      height: 14px;
+      margin-left: 4px;
+    }
+    .player.playing .eq-anim { display: flex; }
+    .eq-anim span {
+      display: block;
+      width: 3px;
+      background: var(--accent);
+      border-radius: 1px;
+      animation: eq var(--spd, .7s) ease-in-out infinite alternate;
+    }
+    .eq-anim span:nth-child(1) { height: 6px;  --spd: .55s; }
+    .eq-anim span:nth-child(2) { height: 10px; --spd: .38s; }
+    .eq-anim span:nth-child(3) { height: 14px; --spd: .62s; }
+    .eq-anim span:nth-child(4) { height: 8px;  --spd: .44s; }
+    @keyframes eq {
+      from { transform: scaleY(.25); }
+      to   { transform: scaleY(1); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">POLARIS<span>·</span>SCAN</div>
+  <p class="tagline">Multi-track music player</p>
+</header>
+
+<!-- SOLO MODE TOGGLE -->
+<div class="solo-wrap" id="soloToggle" role="checkbox" aria-checked="false" tabindex="0">
+  <div class="cb-box">
+    <svg width="13" height="10" viewBox="0 0 13 10" fill="none">
+      <path d="M1 5L5 9L12 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div class="solo-label">
+    <strong>Modo independencia</strong>
+    <span>Solo una pista puede sonar a la vez</span>
+  </div>
+  <div class="solo-pill">OFF</div>
+</div>
+
+<!-- PLAYERS -->
+<div class="players" id="players">
+
+  <!-- Player 1 -->
+  <div class="player" data-index="0">
+    <div class="track-num">01</div>
+    <div class="track-title">
+      Mezcla Pablo
+      <span class="eq-anim"><span></span><span></span><span></span><span></span></span>
+    </div>
+    <div class="track-subtitle">assets/track01.mp3</div>
+    <div class="controls">
+      <button class="btn-play" aria-label="Play / Pause">
+        <svg class="icon-play"  width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5l10 5.5-10 5.5z"/></svg>
+        <svg class="icon-pause" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg>
+      </button>
+      <div class="progress-wrap">
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+        <div class="time-row">
+          <span class="time-current">0:00</span>
+          <span class="time-total">0:00</span>
+        </div>
+      </div>
+      <!--<div class="vol-wrap">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.8" aria-label="Volume"/>
+      </div>-->
+    </div>
+    <div class="player-status">Cargando…</div>
+    <audio src="./assets/track01.mp3" preload="metadata"></audio>
+  </div>
+
+  <!-- Player 2 -->
+  <div class="player" data-index="1">
+    <div class="track-num">02</div>
+    <div class="track-title">
+      Mezcla Jose
+      <span class="eq-anim"><span></span><span></span><span></span><span></span></span>
+    </div>
+    <div class="track-subtitle">assets/track02.mp3</div>
+    <div class="controls">
+      <button class="btn-play" aria-label="Play / Pause">
+        <svg class="icon-play"  width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5l10 5.5-10 5.5z"/></svg>
+        <svg class="icon-pause" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg>
+      </button>
+      <div class="progress-wrap">
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+        <div class="time-row">
+          <span class="time-current">0:00</span>
+          <span class="time-total">0:00</span>
+        </div>
+      </div>
+      <!--<div class="vol-wrap">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.8" aria-label="Volume"/>
+      </div>-->
+    </div>
+    <div class="player-status">Cargando…</div>
+    <audio src="./assets/track02.mp3" preload="metadata"></audio>
+  </div>
+
+  <!-- Player 3 -->
+  <div class="player" data-index="2">
+    <div class="track-num">03</div>
+    <div class="track-title">
+      Masochist
+      <span class="eq-anim"><span></span><span></span><span></span><span></span></span>
+    </div>
+    <div class="track-subtitle">assets/track03.mp3</div>
+    <div class="controls">
+      <button class="btn-play" aria-label="Play / Pause">
+        <svg class="icon-play"  width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5l10 5.5-10 5.5z"/></svg>
+        <svg class="icon-pause" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg>
+      </button>
+      <div class="progress-wrap">
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+        <div class="time-row">
+          <span class="time-current">0:00</span>
+          <span class="time-total">0:00</span>
+        </div>
+      </div>
+      <!--<div class="vol-wrap">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.8" aria-label="Volume"/>
+      </div>-->
+    </div>
+    <div class="player-status">Cargando…</div>
+    <audio src="./assets/track03.mp3" preload="metadata"></audio>
+  </div>
+
+  <!-- Player 4 -->
+  <div class="player" data-index="3">
+    <div class="track-num">04</div>
+    <div class="track-title">
+      Remember Me
+      <span class="eq-anim"><span></span><span></span><span></span><span></span></span>
+    </div>
+    <div class="track-subtitle">assets/track04.mp3</div>
+    <div class="controls">
+      <button class="btn-play" aria-label="Play / Pause">
+        <svg class="icon-play"  width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5l10 5.5-10 5.5z"/></svg>
+        <svg class="icon-pause" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg>
+      </button>
+      <div class="progress-wrap">
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+        <div class="time-row">
+          <span class="time-current">0:00</span>
+          <span class="time-total">0:00</span>
+        </div>
+      </div>
+      <!--<div class="vol-wrap">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="0.8" aria-label="Volume"/>
+      </div>-->
+    </div>
+    <div class="player-status">Cargando…</div>
+    <audio src="./assets/track04.mp3" preload="metadata"></audio>
+  </div>
+
+</div>
+
+<footer>POLARIS SCAN · Comparador de Audio</footer>
+
+<script>
+  // ── State ─────────────────────────────────────
+  let soloMode = false;
+
+  // ── Solo toggle ───────────────────────────────
+  const soloToggle = document.getElementById('soloToggle');
+  const soloPill   = soloToggle.querySelector('.solo-pill');
+
+  function toggleSolo() {
+    soloMode = !soloMode;
+    soloToggle.classList.toggle('active', soloMode);
+    soloToggle.setAttribute('aria-checked', soloMode);
+    soloPill.textContent = soloMode ? 'ON' : 'OFF';
+  }
+
+  soloToggle.addEventListener('click', toggleSolo);
+  soloToggle.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleSolo(); } });
+
+  // ── Helpers ───────────────────────────────────
+  function fmt(s) {
+    if (!isFinite(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const ss = String(Math.floor(s % 60)).padStart(2, '0');
+    return `${m}:${ss}`;
+  }
+
+  // ── Player init ───────────────────────────────
+  const playerEls = document.querySelectorAll('.player');
+
+  playerEls.forEach(el => {
+    const audio      = el.querySelector('audio');
+    const btnPlay    = el.querySelector('.btn-play');
+    const fill       = el.querySelector('.progress-fill');
+    const bar        = el.querySelector('.progress-bar');
+    const timeCur    = el.querySelector('.time-current');
+    const timeTotal  = el.querySelector('.time-total');
+    const volSlider  = el.querySelector('.vol-slider');
+    const statusEl   = el.querySelector('.player-status');
+
+    // Set initial volume
+    audio.volume = parseFloat(volSlider.value);
+
+    // Metadata loaded → show duration
+    audio.addEventListener('loadedmetadata', () => {
+      timeTotal.textContent = fmt(audio.duration);
+      statusEl.textContent  = '';
+    });
+
+    audio.addEventListener('error', () => {
+      statusEl.textContent = '⚠ Archivo no encontrado';
+    });
+
+    // Timeupdate → move bar
+    audio.addEventListener('timeupdate', () => {
+      if (!audio.duration) return;
+      const pct = (audio.currentTime / audio.duration) * 100;
+      fill.style.width = pct + '%';
+      timeCur.textContent = fmt(audio.currentTime);
+    });
+
+    // Ended
+    audio.addEventListener('ended', () => {
+      el.classList.remove('playing');
+      fill.style.width = '0%';
+      timeCur.textContent = '0:00';
+    });
+
+    // Play/Pause button
+    btnPlay.addEventListener('click', () => {
+      const isPlaying = !audio.paused;
+      if (isPlaying) {
+        audio.pause();
+        el.classList.remove('playing');
+      } else {
+        // Solo mode: pause all others
+        if (soloMode) {
+          playerEls.forEach(other => {
+            if (other === el) return;
+            const otherAudio = other.querySelector('audio');
+            otherAudio.pause();
+            other.classList.remove('playing');
+          });
+        }
+        audio.play().catch(() => {
+          statusEl.textContent = '⚠ No se pudo reproducir';
+        });
+        el.classList.add('playing');
+      }
+    });
+
+    // Click on progress bar → seek
+    bar.addEventListener('click', e => {
+      if (!audio.duration) return;
+      const rect = bar.getBoundingClientRect();
+      const ratio = (e.clientX - rect.left) / rect.width;
+      audio.currentTime = ratio * audio.duration;
+    });
+
+    // Volume slider
+    volSlider.addEventListener('input', () => {
+      audio.volume = parseFloat(volSlider.value);
+    });
+  });
+</script>
+</body>
+</html>
